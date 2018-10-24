@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Taiwan UVI now</title>
+
+    <script src="https://maps.googleapis.com/maps/api/js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    <script>
+        var markerMap = new Map();
+        $(function () {
+            uvi_map = new google.maps.Map($('#uviMap').get(0), {
+                zoom: 8, center: { lat: 23.64, lng: 120.20 }//雲林
+            });
+            $.ajax({
+                url: 'https://opendata.epa.gov.tw/ws/Data/UV/?$format=json',
+                dataType: 'jsonp',
+                success: addUviMakers,
+                error: function (x) {
+                    console.log('*********<br/> error code:' + x.status);
+                }
+            })
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(addMarkerHere)
+            };
+        });
+
+        function addMarkerHere(pos) {
+            var marker = new google.maps.Marker({
+                position: {
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude
+                },
+                map: uvi_map,
+                title: 'Here you are!'
+            });
+        }
+
+        function addUviMakers(date) {
+            var atNight = true;
+            if (date == null) {
+                alert('open date 無資料!');
+                return;
+            }
+
+            $.each(date, function () {
+                //位置
+                var latlng = {
+                    lat: getWGS84Value(this.WGS84Lat),
+                    lng: getWGS84Value(this.WGS84Lon)
+                };
+
+                //紫外線指數+icon圖示
+                var uvi = parseInt(this.UVI);
+                var iconName;
+                if (uvi != 0) {//有一個地方uvi不是0就不算晚上!
+                    atNight = false;
+                };
+
+                if (isNaN(uvi)) {//非數字，紫外線指數設null!
+                    uvi = null;
+                    iconName = 'question';
+                }
+                else {
+                    if (uvi <= 2) {
+                        iconName = 'cloud';
+                    }
+                    else if (uvi > 2 && uvi <= 5) {
+                        iconName = 'cloudSun';
+                    }
+                    else if (uvi > 5 && uvi <= 7) {
+                        iconName = 'sun';
+                    }
+                    else if (uvi > 7) {
+                        iconTName = 'flame';
+                    };
+                };
+
+                //add marker!
+                var marker = new google.maps.Marker({
+                    position: latlng,
+                    map: uvi_map,
+                    title: this.County + this.SiteName + '，UVI : ' + (uvi == null ? 'unknown' : uvi.toString()),
+                    label: getUviMarkerLabel(uvi),
+                    icon: 'src/images/' + iconName + '.png'
+                });
+                markerMap.set(latlng, marker);
+            });
+            if (atNight == true) { setAllMarkersNight(); };
+        };
+
+        //WGS84經緯度(60進位度分秒)轉--->WGS84十進位數字 for google map!
+        function getWGS84Value(WGS84L) {
+            var arr = WGS84L.split(',');
+            return parseFloat(arr[0])//度
+                + parseFloat(arr[1] / 60)//分
+                + parseFloat(arr[2] / (60 * 60));//秒
+        }
+
+        function getUviMarkerLabel(uvi) {
+            //'0~9'or'H'or'null'!
+            return uvi == null ? null :
+                uvi > 9 ? 'H' ://因google marker label只能單字元!
+                    uvi.toString();
+        }
+
+        //全點uvi=0->全點設晚上!
+        function setAllMarkersNight() {
+            //var [key, value]
+            for (var [key, marker] of markerMap) {
+                marker.setIcon('src/images/moon.png');
+                marker.setLabel(null);
+            };
+        }
+    </script>
+</head>
+
+<body>
+    <div id="uviMap" style="width:720px; height: 800px; background-color: blueviolet"></div>
+    <span>Thanks Google and Flaticon!</span>
+</body>
+
+</html>
