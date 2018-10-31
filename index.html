@@ -11,7 +11,7 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" rel="stylesheet">
     <script src="objects/js/goToHttps.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js"></script>
-    <!-- <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCfa1B-dY3Z1Nm-7d44Xu7h6GXreZtyTyU"></script>--先不綁信用卡。-->
+    <!-- <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCfa1B-dY3Z1Nm-7d44Xu7h6GXreZtyTyU"></script>先不綁信用卡。-->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <!-- <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>-->
     <!--google map放大縮小時，用Bootstrap調RWD畫面會有重排的震動狀況，故此處不用-->
@@ -36,6 +36,7 @@
                 success: addUviMakers,//###加uvi位置&資訊marker
                 error: function (x) {
                     console.log('*********<br/> error code:' + x.status);
+                    alert('json抓取失敗，error code:' + x.status);
                 }
             })
 
@@ -53,7 +54,12 @@
             })
 
             window.addEventListener('scroll', function () {
-                var startScrollY = this.scrollY;
+                //window.scrollY IE不支持，window.pageYOffset IE 9以下不支持
+                var supportPageOffset = (window.pageXOffset !== undefined);
+                if (!supportPageOffset) {
+                    return;
+                }
+                var startScrollY = this.pageYOffset;
                 if (startScrollY <= lastScrollY) {/*往上滾*/
                     $('header').removeClass('hide');
                 }
@@ -108,10 +114,6 @@
                 //紫外線指數+icon圖示
                 var uvi = parseInt(this.UVI);
                 var iconName;
-                if (uvi != 0) {//有一個地方uvi不是0就不算晚上!
-                    atNight = false;
-                };
-
                 if (isNaN(uvi)) {//非數字，紫外線指數設null!
                     uvi = null;
                     iconName = 'question';
@@ -130,6 +132,9 @@
                         iconTName = 'flame';
                     };
                 };
+                if (uvi != null && uvi != 0) {//有一個地方uvi讀取成功且不是0就不算晚上!
+                    atNight = false;
+                };
 
                 //add marker!
                 var marker = new google.maps.Marker({
@@ -141,7 +146,7 @@
                 });
                 markerMap.set(latlng, marker);
             });
-            if (atNight == true) { setAllMarkersNight(); };
+            if (atNight) { setAllMarkersNight(); };
         };
 
         //WGS84經緯度(60進位度分秒)轉--->WGS84十進位數字 for google map!
@@ -159,19 +164,42 @@
                     uvi.toString();
         }
 
-        //全點uvi=0->除自身位置全點設晚上!
+        //全點uvi=0->除自身或UVI未知位置，全點設晚上!
         function setAllMarkersNight() {
-            //var [key, value]
-            for (var [key, marker] of markerMap) {
-                if (key == 'here') {//跳過自身位置!
-                    continue;
+            //注意IE8以下不支援forEach
+            markerMap.forEach(function (element) {
+                if (element.key == 'here') {//跳過自身位置!
+                    return;
                 }
-                marker.setIcon('src/images/moon.png');
-                marker.setLabel(null);
-            };
+                if (element.label == null) {//跳過UVI數值未知的
+                    return;
+                }
+                element.setIcon('src/images/moon.png');
+                element.setLabel(null);
+            });
+
+            //IE doesn't support ES6(with arrow function)
+            /*  markerMap.forEach(element => {
+                  if (element.key == 'here') {//跳過自身位置!
+                      return;
+                  }
+                  element.setIcon('src/images/moon.png');
+                  element.setLabel(null);
+              });*/
+
+            //for-loop var of在IE不適用!
+            /* for (var [key, marker] of markerMap) {
+                 if (key == 'here') {//跳過自身位置!
+                     continue;
+                 }
+                 marker.setIcon('src/images/moon.png');
+                 marker.setLabel(null);
+             };*/
         }
+
         //uvi位置&資訊marker相關S-----------------------------------------
     </script>
+    <noscript>no javascript support!</noscript>
 </head>
 
 <body>
