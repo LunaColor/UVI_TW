@@ -34,9 +34,16 @@
                 url: 'https://opendata.epa.gov.tw/ws/Data/UV/?$format=json',
                 dataType: 'jsonp',
                 success: addUviMakers,//###加uvi位置&資訊marker
-                error: function (x) {
-                    console.log('*********<br/> error code:' + x.status);
-                    alert('json抓取失敗，error code:' + x.status);
+                error: function () {//在移動端(手機)"https" get jsonp 會失敗，要用"http"。
+                    $.ajax({
+                        url: 'http://opendata.epa.gov.tw/ws/Data/UV/?$format=json',
+                        dataType: 'jsonp',
+                        success: addUviMakers,
+                        error: function (x) {
+                            console.log('*********<br/> error code:' + x.status);
+                            alert('紫外線指數抓取失敗，error code:' + x.status);
+                        }
+                    })
                 }
             })
 
